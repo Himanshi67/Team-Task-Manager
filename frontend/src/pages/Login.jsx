@@ -3,6 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
+// Validation helpers
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -12,6 +18,12 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validate email format
+    if (!validateEmail(form.email)) {
+      setError("Please provide a valid email address.");
+      return;
+    }
 
     try {
       const { data } = await api.post("/auth/login", form);

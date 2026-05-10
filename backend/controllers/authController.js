@@ -2,6 +2,30 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/db");
 
+// Validation helpers
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validatePassword(password) {
+  // At least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+  const minLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+  return {
+    isValid: minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar,
+    minLength,
+    hasUppercase,
+    hasLowercase,
+    hasNumber,
+    hasSpecialChar
+  };
+}
+
 function signToken(user) {
   return jwt.sign(
     { sub: user.id, role: user.role, name: user.name },
@@ -18,6 +42,27 @@ async function register(req, res) {
   }
 
   const normalizedEmail = String(email).toLowerCase().trim();
+
+  // Validate email format
+  if (!validateEmail(normalizedEmail)) {
+    return res.status(400).json({ message: "Please provide a valid email address." });
+  }
+
+  // Validate password strength
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.isValid) {
+    const missing = [];
+    if (!passwordValidation.minLength) missing.push("at least 8 characters");
+    if (!passwordValidation.hasUppercase) missing.push("an uppercase letter");
+    if (!passwordValidation.hasLowercase) missing.push("a lowercase letter");
+    if (!passwordValidation.hasNumber) missing.push("a number");
+    if (!passwordValidation.hasSpecialChar) missing.push("a special character (!@#$%^&*)");
+    
+    return res.status(400).json({ 
+      message: `Password must contain ${missing.join(", ")}.` 
+    });
+  }
+
   const selectedRole = "Member";
   const selectedDepartment = String(department || "General").trim() || "General";
 
@@ -92,13 +137,34 @@ async function registerAdmin(req, res) {
     return res.status(400).json({ message: "name, email, password, and inviteCode are required." });
   }
 
+  const normalizedEmail = String(email).toLowerCase().trim();
+
+  // Validate email format
+  if (!validateEmail(normalizedEmail)) {
+    return res.status(400).json({ message: "Please provide a valid email address." });
+  }
+
+  // Validate password strength
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.isValid) {
+    const missing = [];
+    if (!passwordValidation.minLength) missing.push("at least 8 characters");
+    if (!passwordValidation.hasUppercase) missing.push("an uppercase letter");
+    if (!passwordValidation.hasLowercase) missing.push("a lowercase letter");
+    if (!passwordValidation.hasNumber) missing.push("a number");
+    if (!passwordValidation.hasSpecialChar) missing.push("a special character (!@#$%^&*)");
+    
+    return res.status(400).json({ 
+      message: `Password must contain ${missing.join(", ")}.` 
+    });
+  }
+
   // Validate invite code (can be configured via environment variable)
   const validInviteCodes = (process.env.ADMIN_INVITE_CODES || "ADMIN-2024,ADMIN-SECRET").split(",").map(s => s.trim());
   if (!validInviteCodes.includes(inviteCode)) {
     return res.status(403).json({ message: "Invalid invite code." });
   }
 
-  const normalizedEmail = String(email).toLowerCase().trim();
   const selectedDepartment = String(department || "General").trim() || "General";
 
   try {

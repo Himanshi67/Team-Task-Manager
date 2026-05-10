@@ -3,13 +3,50 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
+// Validation helpers
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validatePassword(password) {
+  const minLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+  return {
+    isValid: minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar,
+    minLength,
+    hasUppercase,
+    hasLowercase,
+    hasNumber,
+    hasSpecialChar
+  };
+}
+
 export default function AdminSignup() {
   const [form, setForm] = useState({ name: "", email: "", password: "", inviteCode: "", department: "Engineering" });
   const [error, setError] = useState("");
+  const [passwordCheck, setPasswordCheck] = useState({
+    isValid: false,
+    minLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecialChar: false
+  });
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const departments = ["Engineering", "Design", "HR", "Management", "Finance", "Operations", "General"];
+
+  const handlePasswordChange = (e) => {
+    const pwd = e.target.value;
+    setForm({ ...form, password: pwd });
+    setPasswordCheck(validatePassword(pwd));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,6 +54,18 @@ export default function AdminSignup() {
 
     if (!form.inviteCode.trim()) {
       setError("Invite code is required for admin registration.");
+      return;
+    }
+
+    // Validate email
+    if (!validateEmail(form.email)) {
+      setError("Please provide a valid email address.");
+      return;
+    }
+
+    // Validate password strength
+    if (!passwordCheck.isValid) {
+      setError("Password does not meet strength requirements.");
       return;
     }
 
@@ -66,9 +115,33 @@ export default function AdminSignup() {
           placeholder="Password"
           type="password"
           value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
+          onChange={handlePasswordChange}
           required
         />
+        
+        {/* Password strength indicator */}
+        {form.password && (
+          <div className="mb-3 rounded bg-slate-50 p-3 text-xs">
+            <p className="mb-2 font-semibold text-slate-700">Password requirements:</p>
+            <div className="space-y-1">
+              <p className={passwordCheck.minLength ? "text-green-600" : "text-red-600"}>
+                ✓ At least 8 characters
+              </p>
+              <p className={passwordCheck.hasUppercase ? "text-green-600" : "text-red-600"}>
+                ✓ One uppercase letter (A-Z)
+              </p>
+              <p className={passwordCheck.hasLowercase ? "text-green-600" : "text-red-600"}>
+                ✓ One lowercase letter (a-z)
+              </p>
+              <p className={passwordCheck.hasNumber ? "text-green-600" : "text-red-600"}>
+                ✓ One number (0-9)
+              </p>
+              <p className={passwordCheck.hasSpecialChar ? "text-green-600" : "text-red-600"}>
+                ✓ One special character (!@#$%^&*)
+              </p>
+            </div>
+          </div>
+        )}
         
         <select
           className="mb-3 w-full rounded border px-3 py-2 text-black"
@@ -91,7 +164,7 @@ export default function AdminSignup() {
           required
         />
         
-        <button className="w-full rounded bg-purple-600 px-3 py-2 text-white hover:bg-purple-700 font-medium">
+        <button className="w-full rounded bg-purple-600 px-3 py-2 text-white hover:bg-purple-700 font-medium" disabled={!passwordCheck.isValid}>
           Create Admin Account
         </button>
         
