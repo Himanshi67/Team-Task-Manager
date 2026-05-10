@@ -84,14 +84,14 @@ export default function ProjectDetails() {
           <h2 className="mb-3 text-lg font-semibold text-slate-900">Create Task</h2>
           <div className="grid gap-2 sm:grid-cols-3">
             <input
-              className="rounded border px-3 py-2"
+              className="rounded border px-3 py-2 text-black"
               placeholder="Task title"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               required
             />
             <select
-              className="rounded border px-3 py-2"
+              className="rounded border px-3 py-2 text-black"
               value={form.assignedTo}
               onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
               required
@@ -104,7 +104,7 @@ export default function ProjectDetails() {
               ))}
             </select>
             <input
-              className="rounded border px-3 py-2"
+              className="rounded border px-3 py-2 text-black"
               type="date"
               value={form.dueDate}
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
