@@ -85,7 +85,48 @@ async function login(req, res) {
   }
 }
 
+async function registerAdmin(req, res) {
+  const { name, email, password, department, inviteCode } = req.body;
+
+  if (!name || !email || !password || !inviteCode) {
+    return res.status(400).json({ message: "name, email, password, and inviteCode are required." });
+  }
+
+  // Validate invite code (can be configured via environment variable)
+  const validInviteCodes = (process.env.ADMIN_INVITE_CODES || "ADMIN-2024,ADMIN-SECRET").split(",").map(s => s.trim());
+  if (!validInviteCodes.includes(inviteCode)) {
+    return res.status(403).json({ message: "Invalid invite code." });
+  }
+
+  const normalizedEmail = String(email).toLowerCase().trim();
+  const selectedDepartment = String(department || "General").trim() || "General";
+
+  try {
+    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
+    if (existing.rowCount > 0) {
+      return res.status(409).json({ message: "Email is already registered." });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (name, email, password_hash, role, department)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, email, role, department, created_at`,
+      [name.trim(), normalizedEmail, passwordHash, "Admin", selectedDepartment]
+    );
+
+    const user = result.rows[0];
+    const token = signToken(user);
+
+    return res.status(201).json({ token, user });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to register admin user.", error: error.message });
+  }
+}
+
 module.exports = {
   register,
-  login
+  login,
+  registerAdmin
 };

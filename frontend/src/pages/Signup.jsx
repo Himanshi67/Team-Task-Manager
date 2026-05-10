@@ -35,14 +35,14 @@ export default function Signup() {
         <h1 className="mb-4 text-2xl font-semibold text-slate-900">Create Account</h1>
         {error ? <p className="mb-3 rounded bg-red-100 p-2 text-sm text-red-700">{error}</p> : null}
         <input
-          className="mb-3 w-full rounded border px-3 py-2"
+          className="mb-3 w-full rounded border px-3 py-2 text-black"
           placeholder="Name"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           required
         />
         <input
-          className="mb-3 w-full rounded border px-3 py-2"
+          className="mb-3 w-full rounded border px-3 py-2 text-black"
           placeholder="Email"
           type="email"
           value={form.email}
@@ -50,7 +50,7 @@ export default function Signup() {
           required
         />
         <input
-          className="mb-3 w-full rounded border px-3 py-2"
+          className="mb-3 w-full rounded border px-3 py-2 text-black"
           placeholder="Password"
           type="password"
           value={form.password}
@@ -58,7 +58,7 @@ export default function Signup() {
           required
         />
         <select
-          className="mb-4 w-full rounded border px-3 py-2"
+          className="mb-4 w-full rounded border px-3 py-2 text-black"
           value={form.department}
           onChange={(e) => setForm({ ...form, department: e.target.value })}
         >

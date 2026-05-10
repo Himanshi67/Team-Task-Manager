@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "./pages/Login";
+import SignupChoice from "./pages/SignupChoice";
 import Signup from "./pages/Signup";
+import AdminSignup from "./pages/AdminSignup";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
@@ -33,10 +35,26 @@ export default function App() {
         }
       />
       <Route
+        path="/signup-choice"
+        element={
+          <PublicRoute>
+            <SignupChoice />
+          </PublicRoute>
+        }
+      />
+      <Route
         path="/signup"
         element={
           <PublicRoute>
             <Signup />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/admin-signup"
+        element={
+          <PublicRoute>
+            <AdminSignup />
           </PublicRoute>
         }
       />
