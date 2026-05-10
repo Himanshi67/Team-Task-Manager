@@ -39,7 +39,7 @@ async function startServer() {
   await initializeDatabase();
 
   const port = process.env.PORT || 5000;
-  app.listen(port, () => {
+  app.listen(process.env.PORT || 5000, () => {
     console.log(`API running on port ${port}`);
     console.log(`Database mode: ${pool.isMemory ? "pg-mem (in-memory)" : "PostgreSQL"}`);
   });
