@@ -4,10 +4,17 @@ import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
 export default function Signup() {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "Member" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    department: "Engineering"
+  });
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const departments = ["Engineering", "Design", "HR", "Management", "Finance", "Operations", "General"];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,12 +59,16 @@ export default function Signup() {
         />
         <select
           className="mb-4 w-full rounded border px-3 py-2"
-          value={form.role}
-          onChange={(e) => setForm({ ...form, role: e.target.value })}
+          value={form.department}
+          onChange={(e) => setForm({ ...form, department: e.target.value })}
         >
-          <option value="Member">Member</option>
-          <option value="Admin">Admin</option>
+          {departments.map((department) => (
+            <option key={department} value={department}>
+              {department}
+            </option>
+          ))}
         </select>
+        <p className="mb-4 text-xs text-slate-500">New accounts are created as Member users. Admin access is assigned by the system owner.</p>
         <button className="w-full rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-800">Sign Up</button>
         <p className="mt-3 text-sm text-slate-600">
           Already have an account? <Link className="font-medium text-slate-900" to="/login">Login</Link>

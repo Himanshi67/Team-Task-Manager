@@ -48,7 +48,7 @@ async function getProjects(req, res) {
 }
 
 async function createProject(req, res) {
-  const { name, description } = req.body;
+  const { name, description, department, memberIds = [] } = req.body;
 
   if (!name) {
     return res.status(400).json({ message: "Project name is required." });
@@ -58,6 +58,30 @@ async function createProject(req, res) {
 
   try {
     await client.query("BEGIN");
+
+    const normalizedDepartment = department ? String(department).trim() : "";
+    const selectedMemberIds = Array.isArray(memberIds)
+      ? memberIds.map((memberId) => Number(memberId)).filter((memberId) => Number.isInteger(memberId))
+      : [];
+
+    let memberQuery = "SELECT id FROM users WHERE id = $1";
+    const memberQueryParts = [req.user.id];
+
+    if (normalizedDepartment && selectedMemberIds.length === 0) {
+      memberQuery = "SELECT id FROM users WHERE department = $1";
+      memberQueryParts.splice(0, memberQueryParts.length, normalizedDepartment);
+    } else if (normalizedDepartment && selectedMemberIds.length > 0) {
+      const idPlaceholders = selectedMemberIds.map((_, index) => `$${index + 2}`).join(", ");
+      memberQuery = `SELECT id FROM users WHERE department = $1 AND id IN (${idPlaceholders})`;
+      memberQueryParts.splice(0, memberQueryParts.length, normalizedDepartment, ...selectedMemberIds);
+    } else if (!normalizedDepartment && selectedMemberIds.length > 0) {
+      const idPlaceholders = selectedMemberIds.map((_, index) => `$${index + 1}`).join(", ");
+      memberQuery = `SELECT id FROM users WHERE id IN (${idPlaceholders})`;
+      memberQueryParts.splice(0, memberQueryParts.length, ...selectedMemberIds);
+    }
+
+    const eligibleMembersRes = await client.query(memberQuery, memberQueryParts);
+    const eligibleMemberIds = new Set(eligibleMembersRes.rows.map((row) => row.id));
 
     const projectRes = await client.query(
       `INSERT INTO projects (name, description, created_by)
@@ -72,6 +96,17 @@ async function createProject(req, res) {
        ON CONFLICT (project_id, user_id) DO NOTHING`,
       [projectRes.rows[0].id, req.user.id]
     );
+
+    for (const memberId of eligibleMemberIds) {
+      if (memberId !== req.user.id) {
+        await client.query(
+          `INSERT INTO project_members (project_id, user_id)
+           VALUES ($1, $2)
+           ON CONFLICT (project_id, user_id) DO NOTHING`,
+          [projectRes.rows[0].id, memberId]
+        );
+      }
+    }
 
     await client.query("COMMIT");
     return res.status(201).json(projectRes.rows[0]);

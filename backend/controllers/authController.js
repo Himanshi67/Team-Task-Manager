@@ -11,14 +11,15 @@ function signToken(user) {
 }
 
 async function register(req, res) {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, department } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: "name, email, and password are required." });
   }
 
   const normalizedEmail = String(email).toLowerCase().trim();
-  const selectedRole = role === "Admin" ? "Admin" : "Member";
+  const selectedRole = "Member";
+  const selectedDepartment = String(department || "General").trim() || "General";
 
   try {
     const existing = await pool.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
@@ -29,10 +30,10 @@ async function register(req, res) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, role, created_at`,
-      [name.trim(), normalizedEmail, passwordHash, selectedRole]
+      `INSERT INTO users (name, email, password_hash, role, department)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, email, role, department, created_at`,
+      [name.trim(), normalizedEmail, passwordHash, selectedRole, selectedDepartment]
     );
 
     const user = result.rows[0];
@@ -53,7 +54,7 @@ async function login(req, res) {
 
   try {
     const result = await pool.query(
-      "SELECT id, name, email, role, password_hash FROM users WHERE email = $1",
+      "SELECT id, name, email, role, department, password_hash FROM users WHERE email = $1",
       [String(email).toLowerCase().trim()]
     );
 
@@ -72,7 +73,8 @@ async function login(req, res) {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      department: user.department
     };
 
     const token = signToken(safeUser);

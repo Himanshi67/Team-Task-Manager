@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import api, { withAuth } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -37,8 +37,7 @@ function formatNumber(value) {
 
 function NavItem({ icon, label, active = false }) {
   return (
-    <button
-      type="button"
+    <div
       className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm transition ${
         active
           ? "bg-[#3B82F6] text-white shadow-lg shadow-blue-950/40"
@@ -47,7 +46,7 @@ function NavItem({ icon, label, active = false }) {
     >
       {icon}
       <span className="font-medium">{label}</span>
-    </button>
+    </div>
   );
 }
 
@@ -74,11 +73,21 @@ function StatCard({ label, count, icon, tone = "blue" }) {
 }
 
 export default function Dashboard() {
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
   const [summary, setSummary] = useState({ totalTasks: 0, completedTasks: 0, overdueTasks: 0 });
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
+  const [projectForm, setProjectForm] = useState({
+    name: "",
+    description: "",
+    department: "",
+    memberIds: [],
+    assignAllDepartmentMembers: true
+  });
+  const [projectMessage, setProjectMessage] = useState("");
 
   useEffect(() => {
     const loadData = async () => {
@@ -99,6 +108,64 @@ export default function Dashboard() {
 
     loadData();
   }, [token]);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (user?.role !== "Admin") {
+        return;
+      }
+
+      try {
+        const { data } = await api.get("/users", withAuth(token));
+        setUsers(data);
+      } catch (_err) {
+        setUsers([]);
+      }
+    };
+
+    loadUsers();
+  }, [token, user?.role]);
+
+  const departmentOptions = useMemo(
+    () => Array.from(new Set(users.map((member) => member.department).filter(Boolean))),
+    [users]
+  );
+
+  const visibleDepartmentMembers = useMemo(() => {
+    if (!projectForm.department) {
+      return users;
+    }
+
+    return users.filter((member) => member.department === projectForm.department);
+  }, [users, projectForm.department]);
+
+  useEffect(() => {
+    if (user?.role !== "Admin" || departmentOptions.length === 0) {
+      return;
+    }
+
+    setProjectForm((current) => {
+      if (current.department) {
+        return current;
+      }
+
+      return {
+        ...current,
+        department: departmentOptions[0]
+      };
+    });
+  }, [departmentOptions, user?.role]);
+
+  useEffect(() => {
+    if (!projectForm.assignAllDepartmentMembers) {
+      return;
+    }
+
+    setProjectForm((current) => ({
+      ...current,
+      memberIds: visibleDepartmentMembers.map((member) => String(member.id))
+    }));
+  }, [projectForm.assignAllDepartmentMembers, visibleDepartmentMembers]);
 
   const chartRows = useMemo(() => {
     if (user?.role === "Admin") {
@@ -138,6 +205,56 @@ export default function Dashboard() {
   const currentUserName = user?.name || "Avery Stone";
   const currentUserRole = user?.role || "Member";
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  const handleCreateProject = async (e) => {
+    e.preventDefault();
+    setError("");
+    setProjectMessage("");
+
+    try {
+      await api.post(
+        "/projects",
+        {
+          name: projectForm.name,
+          description: projectForm.description,
+          department: projectForm.department,
+          memberIds: projectForm.memberIds.map((memberId) => Number(memberId))
+        },
+        withAuth(token)
+      );
+
+      setProjectForm((current) => ({
+        ...current,
+        name: "",
+        description: ""
+      }));
+
+      setProjectMessage("Project created and assigned successfully.");
+
+      const { data } = await api.get("/projects", withAuth(token));
+      setProjects(data);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to create project.");
+    }
+  };
+
+  const handleMemberToggle = (memberId) => {
+    setProjectForm((current) => {
+      const exists = current.memberIds.includes(String(memberId));
+      return {
+        ...current,
+        assignAllDepartmentMembers: false,
+        memberIds: exists
+          ? current.memberIds.filter((id) => id !== String(memberId))
+          : [...current.memberIds, String(memberId)]
+      };
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-[#0B0F19] font-sans text-white">
       <aside className="fixed inset-y-0 left-0 flex w-72 flex-col border-r border-white/10 bg-[#0B0F19]/95 px-6 py-6 backdrop-blur">
@@ -153,11 +270,21 @@ export default function Dashboard() {
           </div>
 
           <nav className="space-y-2">
-            <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active />
-            <NavItem icon={<FolderKanban size={20} />} label="Projects" />
-            <NavItem icon={<Users size={20} />} label="Team" />
-            <NavItem icon={<Calendar size={20} />} label="Calendar" />
-            <NavItem icon={<Bell size={20} />} label="Notifications" />
+            <NavLink to="/" end className="block">
+              {({ isActive }) => <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={isActive} />}
+            </NavLink>
+            <NavLink to="/projects" className="block">
+              {({ isActive }) => <NavItem icon={<FolderKanban size={20} />} label="Projects" active={isActive} />}
+            </NavLink>
+            <NavLink to="/team" className="block">
+              {({ isActive }) => <NavItem icon={<Users size={20} />} label="Team" active={isActive} />}
+            </NavLink>
+            <NavLink to="/calendar" className="block">
+              {({ isActive }) => <NavItem icon={<Calendar size={20} />} label="Calendar" active={isActive} />}
+            </NavLink>
+            <NavLink to="/notifications" className="block">
+              {({ isActive }) => <NavItem icon={<Bell size={20} />} label="Notifications" active={isActive} />}
+            </NavLink>
           </nav>
         </div>
 
@@ -179,6 +306,7 @@ export default function Dashboard() {
           <button
             type="button"
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
+            onClick={handleLogout}
           >
             <LogOut size={16} /> Logout
           </button>
@@ -323,15 +451,97 @@ export default function Dashboard() {
 
         <section className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-3xl border border-white/10 bg-[#161B26] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.28)]">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-white">Projects</h2>
-                <p className="mt-1 text-sm text-slate-400">Open workspaces and their workload.</p>
+                <p className="mt-1 text-sm text-slate-400">Create and assign projects by department.</p>
               </div>
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
                 {projects.length} total
               </span>
             </div>
+
+            {user?.role === "Admin" ? (
+              <form onSubmit={handleCreateProject} className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <input
+                    className="rounded-xl border border-white/10 bg-[#0B0F19] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                    placeholder="Project name"
+                    value={projectForm.name}
+                    onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                    required
+                  />
+                  <select
+                    className="rounded-xl border border-white/10 bg-[#0B0F19] px-4 py-3 text-white outline-none"
+                    value={projectForm.department}
+                    onChange={(e) =>
+                      setProjectForm({
+                        ...projectForm,
+                        department: e.target.value,
+                        assignAllDepartmentMembers: true
+                      })
+                    }
+                  >
+                    <option value="">All departments</option>
+                    {departmentOptions.map((department) => (
+                      <option key={department} value={department}>
+                        {department}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <textarea
+                  className="mt-3 w-full rounded-xl border border-white/10 bg-[#0B0F19] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                  placeholder="Project description"
+                  rows={3}
+                  value={projectForm.description}
+                  onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
+                />
+
+                <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={projectForm.assignAllDepartmentMembers}
+                    onChange={(e) =>
+                      setProjectForm({
+                        ...projectForm,
+                        assignAllDepartmentMembers: e.target.checked,
+                        memberIds: e.target.checked ? visibleDepartmentMembers.map((member) => String(member.id)) : projectForm.memberIds
+                      })
+                    }
+                  />
+                  Assign to all members in selected department
+                </label>
+
+                <div className="mt-4 grid gap-2 md:grid-cols-2">
+                  {visibleDepartmentMembers.map((member) => (
+                    <label
+                      key={member.id}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0B0F19] px-4 py-3 text-sm text-slate-300"
+                    >
+                      <span>
+                        {member.name}
+                        <span className="ml-2 text-xs text-slate-500">{member.department}</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={projectForm.memberIds.includes(String(member.id))}
+                        disabled={projectForm.assignAllDepartmentMembers}
+                        onChange={() => handleMemberToggle(member.id)}
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-center gap-3">
+                  <button className="rounded-xl bg-[#3B82F6] px-5 py-3 text-sm font-medium text-white hover:bg-blue-500">
+                    Create Project
+                  </button>
+                  {projectMessage ? <p className="text-sm text-emerald-300">{projectMessage}</p> : null}
+                </div>
+              </form>
+            ) : null}
 
             <div className="grid gap-3 md:grid-cols-2">
               {projects.map((project) => (

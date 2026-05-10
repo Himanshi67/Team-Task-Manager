@@ -15,26 +15,58 @@ async function applySchema() {
   await pool.query(sql);
 }
 
+async function ensureUserDepartmentColumn() {
+  try {
+    await pool.query("ALTER TABLE users ADD COLUMN department VARCHAR(100)");
+  } catch (error) {
+    if (!String(error.message || error).includes("already exists")) {
+      throw error;
+    }
+  }
+
+  await pool.query("UPDATE users SET department = COALESCE(department, 'General') WHERE department IS NULL");
+  await pool.query("ALTER TABLE users ALTER COLUMN department SET DEFAULT 'General'");
+  await pool.query("ALTER TABLE users ALTER COLUMN department SET NOT NULL");
+}
+
 async function seedDemoData() {
   const adminHash = await bcrypt.hash("Admin@123", 10);
   const memberHash = await bcrypt.hash("Member@123", 10);
+  const designerHash = await bcrypt.hash("Designer@123", 10);
+  const hrHash = await bcrypt.hash("Hr@123", 10);
 
   const adminRes = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role)
-     VALUES ($1, $2, $3, 'Admin')
+    `INSERT INTO users (name, email, password_hash, role, department)
+     VALUES ($1, $2, $3, 'Admin', $4)
      ON CONFLICT (email)
-     DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role
+     DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, department = EXCLUDED.department
      RETURNING id`,
-    ["Demo Admin", "admin@demo.com", adminHash]
+    ["Demo Admin", "admin@demo.com", adminHash, "Management"]
   );
 
   const memberRes = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role)
-     VALUES ($1, $2, $3, 'Member')
+    `INSERT INTO users (name, email, password_hash, role, department)
+     VALUES ($1, $2, $3, 'Member', $4)
      ON CONFLICT (email)
-     DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role
+     DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, department = EXCLUDED.department
      RETURNING id`,
-    ["Demo Member", "member@demo.com", memberHash]
+    ["Demo Member", "member@demo.com", memberHash, "Engineering"]
+  );
+
+  await pool.query(
+    `INSERT INTO users (name, email, password_hash, role, department)
+     VALUES ($1, $2, $3, 'Member', $4)
+     ON CONFLICT (email)
+     DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, department = EXCLUDED.department`,
+    ["Demo Designer", "designer@demo.com", designerHash, "Design"]
+  );
+
+  await pool.query(
+    `INSERT INTO users (name, email, password_hash, role, department)
+     VALUES ($1, $2, $3, 'Member', $4)
+     ON CONFLICT (email)
+     DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, department = EXCLUDED.department`,
+    ["Demo HR", "hr@demo.com", hrHash, "HR"]
   );
 
   const adminId = adminRes.rows[0].id;
@@ -89,6 +121,7 @@ async function seedDemoData() {
 
 async function initializeDatabase() {
   await applySchema();
+  await ensureUserDepartmentColumn();
   console.log("Database schema ensured successfully.");
 
   if (process.env.SEED_DEMO_DATA === "true") {

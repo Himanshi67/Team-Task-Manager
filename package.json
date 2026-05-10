@@ -2,8 +2,13 @@
   "name": "team-task-manager",
   "private": true,
   "version": "1.0.0",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
     "dev": "concurrently -n backend,frontend -c red,cyan \"npm:backend:dev\" \"npm:frontend:dev\"",
+    "start": "npm --workspace backend start",
     "build": "npm --prefix frontend run build",
     "frontend:dev": "npm --prefix frontend run dev",
     "backend:dev": "npm --prefix backend run dev"
