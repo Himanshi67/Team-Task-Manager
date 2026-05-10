@@ -15,30 +15,30 @@ A full-stack collaboration platform with role-based access control (RBAC), JWT a
 ```text
 team-task-manager/
 +-- backend/
-¦   +-- config/
-¦   +-- controllers/
-¦   +-- middleware/
-¦   +-- models/
-¦   +-- routes/
-¦   +-- db/
-¦   ¦   +-- schema.sql
-¦   ¦   +-- bootstrap.js
-¦   +-- scripts/
-¦   ¦   +-- seed.js
-¦   +-- .env.example
-¦   +-- package.json
-¦   +-- index.js
+ï¿½   +-- config/
+ï¿½   +-- controllers/
+ï¿½   +-- middleware/
+ï¿½   +-- models/
+ï¿½   +-- routes/
+ï¿½   +-- db/
+ï¿½   ï¿½   +-- schema.sql
+ï¿½   ï¿½   +-- bootstrap.js
+ï¿½   +-- scripts/
+ï¿½   ï¿½   +-- seed.js
+ï¿½   +-- .env.example
+ï¿½   +-- package.json
+ï¿½   +-- index.js
 +-- frontend/
-¦   +-- src/
-¦   ¦   +-- components/
-¦   ¦   +-- pages/
-¦   ¦   +-- context/
-¦   ¦   +-- api/
-¦   ¦   +-- styles/
-¦   +-- .env.example
-¦   +-- tailwind.config.js
-¦   +-- package.json
-¦   +-- vite.config.js
+ï¿½   +-- src/
+ï¿½   ï¿½   +-- components/
+ï¿½   ï¿½   +-- pages/
+ï¿½   ï¿½   +-- context/
+ï¿½   ï¿½   +-- api/
+ï¿½   ï¿½   +-- styles/
+ï¿½   +-- .env.example
+ï¿½   +-- tailwind.config.js
+ï¿½   +-- package.json
+ï¿½   +-- vite.config.js
 +-- README.md
 ```
 
