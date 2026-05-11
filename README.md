@@ -82,7 +82,7 @@ SEED_DEMO_DATA=true
 Frontend `.env`:
 
 ```env
-VITE_API_BASE_URL=http://localhost:5000/api
+VITE_API_BASE_URL=team-task-manager-backend-production-a81f.up.railway.app
 ```
 
 ### 4. Push Prisma schema
