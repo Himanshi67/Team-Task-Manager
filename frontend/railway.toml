@@ -4,4 +4,4 @@ buildCommand = "npm install"
 
 [deploy]
 startCommand = "npm run build"
-healthcheckPath = "/health"
+healthcheckPath = "/api/health"
