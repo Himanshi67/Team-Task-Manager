@@ -8,7 +8,7 @@ function daysFromNow(days) {
 }
 
 async function assertSchemaReady() {
-  const schemaCheck = await pool.query("SELECT to_regclass('public.users') AS users_table");
+  const schemaCheck = await pool.query("SELECT to_regclass('public.users')::text AS users_table");
 
   if (!schemaCheck.rows[0] || !schemaCheck.rows[0].users_table) {
     throw new Error("Database schema is missing. Run `npm run prisma:push` in backend first.");
