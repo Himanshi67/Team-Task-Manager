@@ -52,7 +52,34 @@ app.use((_req, res) => {
 });
 
 async function startServer() {
-  await initializeDatabase();
+  const maxAttempts = Number(process.env.DB_INIT_RETRIES || 5);
+  const retryDelayMs = Number(process.env.DB_INIT_RETRY_DELAY_MS || 4000);
+
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await initializeDatabase();
+      lastError = null;
+      break;
+    } catch (error) {
+      lastError = error;
+      const errorMessage = error && error.message ? error.message : String(error);
+
+      if (attempt === maxAttempts) {
+        break;
+      }
+
+      console.warn(
+        `[startup] Database init attempt ${attempt}/${maxAttempts} failed: ${errorMessage}. Retrying in ${retryDelayMs}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
 
   const port = process.env.PORT || 5000;
   app.listen(process.env.PORT || 5000, () => {

@@ -1,11 +1,18 @@
 const { PrismaClient } = require("@prisma/client");
 
-const connectionString =
+const pooledOrDefaultUrl =
   process.env.DATABASE_URL ||
   process.env.DATABASE_PUBLIC_URL ||
   process.env.POSTGRES_URL ||
   process.env.POSTGRESQL_URL ||
   "";
+
+const directUrl = process.env.DIRECT_URL || "";
+const shouldPreferDirect =
+  process.env.PREFER_DIRECT_URL === "true" ||
+  (process.env.NODE_ENV === "production" && pooledOrDefaultUrl.includes("-pooler") && Boolean(directUrl));
+
+const connectionString = shouldPreferDirect ? directUrl : pooledOrDefaultUrl;
 
 if (!connectionString) {
   throw new Error(
