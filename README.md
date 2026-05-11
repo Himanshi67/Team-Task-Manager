@@ -71,8 +71,9 @@ Backend `.env`:
 
 ```env
 PORT=5000
-DATABASE_URL=postgresql://<neon_user>:<neon_password>@<your-project>-pooler.<region>.aws.neon.tech/neondb?sslmode=require
-DIRECT_URL=postgresql://<neon_user>:<neon_password>@<your-project>.<region>.aws.neon.tech/neondb?sslmode=require
+# Use libpq compatibility with sslmode=require to avoid future PostgreSQL warnings.
+DATABASE_URL=postgresql://<neon_user>:<neon_password>@<your-project>-pooler.<region>.aws.neon.tech/neondb?uselibpqcompat=true&sslmode=require
+DIRECT_URL=postgresql://<neon_user>:<neon_password>@<your-project>.<region>.aws.neon.tech/neondb?uselibpqcompat=true&sslmode=require
 JWT_SECRET=replace_with_a_secure_secret
 JWT_EXPIRES_IN=7d
 SEED_DEMO_DATA=true
@@ -151,5 +152,6 @@ App URLs:
 ## Deployment Notes
 
 1. Set backend env vars with Neon URLs.
-2. Run `npm --prefix backend run prisma:migrate` (or `npm --prefix backend run prisma:push`) before first boot.
-3. Set frontend `VITE_API_BASE_URL` to deployed backend `/api` URL.
+2. Prefer `uselibpqcompat=true&sslmode=require` in `DATABASE_URL` and `DIRECT_URL` to future-proof PostgreSQL SSL behavior.
+3. Run `npm --prefix backend run prisma:migrate` (or `npm --prefix backend run prisma:push`) before first boot.
+4. Set frontend `VITE_API_BASE_URL` to deployed backend `/api` URL.
