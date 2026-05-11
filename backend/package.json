@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "prestart": "prisma generate",
+    "prestart": "node scripts/init-db.js",
     "start": "node index.js",
     "seed": "node scripts/seed.js",
     "prisma:generate": "prisma generate",
