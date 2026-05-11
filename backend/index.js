@@ -22,9 +22,13 @@ app.use(morgan("dev"));
 app.get("/api/health", async (_req, res) => {
   try {
     await pool.query("SELECT 1");
-    return res.json({ status: "ok", db: "neon-postgres" });
+    return res.json({ status: "ok", db: "connected" });
   } catch (error) {
-    return res.status(500).json({ status: "error", db: "disconnected", error: error.message });
+    return res.status(200).json({
+      status: "degraded",
+      db: "disconnected",
+      error: "Database is unavailable, running in degraded mode"
+    });
   }
 });
 
@@ -77,8 +81,15 @@ async function startServer() {
     }
   }
 
-  if (lastError) {
+  const allowStartWithoutDb = process.env.ALLOW_START_WITHOUT_DB === "true";
+
+  if (lastError && !allowStartWithoutDb) {
     throw lastError;
+  }
+
+  if (lastError && allowStartWithoutDb) {
+    const errorMessage = lastError && lastError.message ? lastError.message : String(lastError);
+    console.warn(`[startup] Continuing without database because ALLOW_START_WITHOUT_DB=true. Last DB error: ${errorMessage}`);
   }
 
   const port = process.env.PORT || 5000;
