@@ -1,4 +1,6 @@
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
 const pool = require("../config/db");
 
 function daysFromNow(days) {
@@ -13,6 +15,37 @@ async function assertSchemaReady() {
   if (!schemaCheck.rows[0] || !schemaCheck.rows[0].users_table) {
     throw new Error("Database schema is missing. Run `npm run prisma:push` in backend first.");
   }
+}
+
+async function applySchemaFallback() {
+  const schemaPath = path.join(__dirname, "schema.sql");
+  const sql = fs.readFileSync(schemaPath, "utf8");
+  const statements = sql
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+
+  for (const statement of statements) {
+    await pool.query(statement);
+  }
+}
+
+async function ensureSchemaAvailable() {
+  try {
+    await assertSchemaReady();
+    return;
+  } catch (error) {
+    const message = String(error.message || error);
+
+    if (!message.includes("Database schema is missing")) {
+      throw error;
+    }
+  }
+
+  console.warn("[db] Schema tables not found. Applying fallback schema from backend/db/schema.sql ...");
+  await applySchemaFallback();
+  await assertSchemaReady();
+  console.log("[db] Fallback schema applied successfully.");
 }
 
 async function seedDemoData() {
@@ -88,9 +121,9 @@ async function seedDemoData() {
   if (existingTaskCount.rows[0].count === 0) {
     await pool.query(
       `INSERT INTO tasks (title, status, due_date, project_id, assigned_to)
-       VALUES ($1, 'Backlog', $4, $7, $5),
-              ($2, 'In-Progress', $6, $7, $3),
-              ($8, 'Done', $4, $7, $5)`,
+       VALUES ($1, 'Backlog', $4::date, $7, $5),
+              ($2, 'In-Progress', $6::date, $7, $3),
+              ($8, 'Done', $4::date, $7, $5)`,
       [
         "Create homepage wireframes",
         "Build API integration",
@@ -106,7 +139,7 @@ async function seedDemoData() {
 }
 
 async function initializeDatabase() {
-  await assertSchemaReady();
+  await ensureSchemaAvailable();
   console.log("Database schema found.");
 
   if (process.env.SEED_DEMO_DATA === "true") {

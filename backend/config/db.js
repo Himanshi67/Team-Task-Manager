@@ -1,10 +1,29 @@
 const { PrismaClient } = require("@prisma/client");
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is required. Add your Neon connection string in backend/.env.");
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.DATABASE_PUBLIC_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRESQL_URL ||
+  "";
+
+if (!connectionString) {
+  throw new Error(
+    "Database URL is missing. Set DATABASE_URL (preferred) or DATABASE_PUBLIC_URL in your deployment variables."
+  );
 }
 
-const prisma = new PrismaClient();
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = connectionString;
+}
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: connectionString
+    }
+  }
+});
 
 function returnsRows(sql) {
   return /^\s*(select|with)\b/i.test(sql) || /\breturning\b/i.test(sql);
