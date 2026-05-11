@@ -1,5 +1,8 @@
 import axios from "axios";
 
+console.log("RAW VITE_API_BASE_URL =", import.meta.env.VITE_API_BASE_URL);
+console.log("RESOLVED API BASE URL =", resolveApiBaseUrl());
+
 function resolveApiBaseUrl() {
   const raw = (import.meta.env.VITE_API_BASE_URL || "").trim();
 
