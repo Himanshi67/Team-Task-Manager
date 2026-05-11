@@ -160,8 +160,13 @@ async function registerAdmin(req, res) {
   }
 
   // Validate invite code (can be configured via environment variable)
-  const validInviteCodes = (process.env.ADMIN_INVITE_CODES || "ADMIN-2024,ADMIN-SECRET").split(",").map(s => s.trim());
-  if (!validInviteCodes.includes(inviteCode)) {
+  const normalizedInviteCode = String(inviteCode || "").trim().toUpperCase();
+  const validInviteCodes = (process.env.ADMIN_INVITE_CODES || "ADMIN-2024,ADMIN-SECRET")
+    .split(",")
+    .map((code) => code.trim().toUpperCase())
+    .filter(Boolean);
+
+  if (!validInviteCodes.includes(normalizedInviteCode)) {
     return res.status(403).json({ message: "Invalid invite code." });
   }
 

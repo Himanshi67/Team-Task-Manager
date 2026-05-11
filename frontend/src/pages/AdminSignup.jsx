@@ -160,7 +160,7 @@ export default function AdminSignup() {
           placeholder="Invite Code (required)"
           type="text"
           value={form.inviteCode}
-          onChange={(e) => setForm({ ...form, inviteCode: e.target.value })}
+          onChange={(e) => setForm({ ...form, inviteCode: e.target.value.toUpperCase() })}
           required
         />
         <p className="mb-3 text-xs text-slate-500">Hint: for demo use the invite code <strong>ADMIN-2024</strong></p>
