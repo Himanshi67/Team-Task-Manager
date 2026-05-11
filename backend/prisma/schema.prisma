@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                Int             @id @default(autoincrement())
+  name              String          @db.VarChar(120)
+  email             String          @unique @db.VarChar(180)
+  passwordHash      String          @map("password_hash")
+  role              String          @default("Member") @db.VarChar(20)
+  department        String          @default("General") @db.VarChar(100)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  createdProjects   Project[]       @relation("CreatedProjects")
+  projectMembership ProjectMember[]
+  assignedTasks     Task[]          @relation("AssignedTasks")
+  comments          Comment[]
+
+  @@map("users")
+}
+
+model Project {
+  id          Int             @id @default(autoincrement())
+  name        String          @db.VarChar(180)
+  description String?
+  createdBy   Int             @map("created_by")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  creator     User            @relation("CreatedProjects", fields: [createdBy], references: [id], onDelete: Cascade)
+  members     ProjectMember[]
+  tasks       Task[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId Int     @map("project_id")
+  userId    Int     @map("user_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@map("project_members")
+}
+
+model Task {
+  id         Int        @id @default(autoincrement())
+  title      String     @db.VarChar(200)
+  status     String     @default("Backlog") @db.VarChar(20)
+  dueDate    DateTime?  @map("due_date") @db.Date
+  projectId  Int        @map("project_id")
+  assignedTo Int        @map("assigned_to")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @default(now()) @map("updated_at")
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee   User       @relation("AssignedTasks", fields: [assignedTo], references: [id], onDelete: Cascade)
+  subtasks   Subtask[]
+  comments   Comment[]
+
+  @@map("tasks")
+}
+
+model Subtask {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  isCompleted Boolean  @default(false) @map("is_completed")
+  taskId      Int      @map("task_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("subtasks")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    Int      @map("user_id")
+  taskId    Int      @map("task_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}

@@ -54,67 +54,75 @@ async function createProject(req, res) {
     return res.status(400).json({ message: "Project name is required." });
   }
 
-  const client = await pool.connect();
-
   try {
-    await client.query("BEGIN");
+    const createdProject = await pool.prisma.$transaction(async (tx) => {
+      async function txQuery(sql, params = []) {
+        if (/^\s*(select|with)\b/i.test(sql) || /\breturning\b/i.test(sql)) {
+          const rows = await tx.$queryRawUnsafe(sql, ...params);
+          return { rows, rowCount: rows.length };
+        }
 
-    const normalizedDepartment = department ? String(department).trim() : "";
-    const selectedMemberIds = Array.isArray(memberIds)
-      ? memberIds.map((memberId) => Number(memberId)).filter((memberId) => Number.isInteger(memberId))
-      : [];
-
-    let memberQuery = "SELECT id FROM users WHERE id = $1";
-    const memberQueryParts = [req.user.id];
-
-    if (normalizedDepartment && selectedMemberIds.length === 0) {
-      memberQuery = "SELECT id FROM users WHERE department = $1";
-      memberQueryParts.splice(0, memberQueryParts.length, normalizedDepartment);
-    } else if (normalizedDepartment && selectedMemberIds.length > 0) {
-      const idPlaceholders = selectedMemberIds.map((_, index) => `$${index + 2}`).join(", ");
-      memberQuery = `SELECT id FROM users WHERE department = $1 AND id IN (${idPlaceholders})`;
-      memberQueryParts.splice(0, memberQueryParts.length, normalizedDepartment, ...selectedMemberIds);
-    } else if (!normalizedDepartment && selectedMemberIds.length > 0) {
-      const idPlaceholders = selectedMemberIds.map((_, index) => `$${index + 1}`).join(", ");
-      memberQuery = `SELECT id FROM users WHERE id IN (${idPlaceholders})`;
-      memberQueryParts.splice(0, memberQueryParts.length, ...selectedMemberIds);
-    }
-
-    const eligibleMembersRes = await client.query(memberQuery, memberQueryParts);
-    const eligibleMemberIds = new Set(eligibleMembersRes.rows.map((row) => row.id));
-
-    const projectRes = await client.query(
-      `INSERT INTO projects (name, description, created_by)
-       VALUES ($1, $2, $3)
-       RETURNING id, name, description, created_by, created_at`,
-      [name.trim(), description || "", req.user.id]
-    );
-
-    await client.query(
-      `INSERT INTO project_members (project_id, user_id)
-       VALUES ($1, $2)
-       ON CONFLICT (project_id, user_id) DO NOTHING`,
-      [projectRes.rows[0].id, req.user.id]
-    );
-
-    for (const memberId of eligibleMemberIds) {
-      if (memberId !== req.user.id) {
-        await client.query(
-          `INSERT INTO project_members (project_id, user_id)
-           VALUES ($1, $2)
-           ON CONFLICT (project_id, user_id) DO NOTHING`,
-          [projectRes.rows[0].id, memberId]
-        );
+        const rowCount = await tx.$executeRawUnsafe(sql, ...params);
+        return { rows: [], rowCount: Number(rowCount) || 0 };
       }
-    }
 
-    await client.query("COMMIT");
-    return res.status(201).json(projectRes.rows[0]);
+      const normalizedDepartment = department ? String(department).trim() : "";
+      const selectedMemberIds = Array.isArray(memberIds)
+        ? memberIds.map((memberId) => Number(memberId)).filter((memberId) => Number.isInteger(memberId))
+        : [];
+
+      let memberQuery = "SELECT id FROM users WHERE id = $1";
+      const memberQueryParts = [req.user.id];
+
+      if (normalizedDepartment && selectedMemberIds.length === 0) {
+        memberQuery = "SELECT id FROM users WHERE department = $1";
+        memberQueryParts.splice(0, memberQueryParts.length, normalizedDepartment);
+      } else if (normalizedDepartment && selectedMemberIds.length > 0) {
+        const idPlaceholders = selectedMemberIds.map((_, index) => `$${index + 2}`).join(", ");
+        memberQuery = `SELECT id FROM users WHERE department = $1 AND id IN (${idPlaceholders})`;
+        memberQueryParts.splice(0, memberQueryParts.length, normalizedDepartment, ...selectedMemberIds);
+      } else if (!normalizedDepartment && selectedMemberIds.length > 0) {
+        const idPlaceholders = selectedMemberIds.map((_, index) => `$${index + 1}`).join(", ");
+        memberQuery = `SELECT id FROM users WHERE id IN (${idPlaceholders})`;
+        memberQueryParts.splice(0, memberQueryParts.length, ...selectedMemberIds);
+      }
+
+      const eligibleMembersRes = await txQuery(memberQuery, memberQueryParts);
+      const eligibleMemberIds = new Set(eligibleMembersRes.rows.map((row) => row.id));
+
+      const projectRes = await txQuery(
+        `INSERT INTO projects (name, description, created_by)
+         VALUES ($1, $2, $3)
+         RETURNING id, name, description, created_by, created_at`,
+        [name.trim(), description || "", req.user.id]
+      );
+
+      const projectId = projectRes.rows[0].id;
+
+      await txQuery(
+        `INSERT INTO project_members (project_id, user_id)
+         VALUES ($1, $2)
+         ON CONFLICT (project_id, user_id) DO NOTHING`,
+        [projectId, req.user.id]
+      );
+
+      for (const memberId of eligibleMemberIds) {
+        if (memberId !== req.user.id) {
+          await txQuery(
+            `INSERT INTO project_members (project_id, user_id)
+             VALUES ($1, $2)
+             ON CONFLICT (project_id, user_id) DO NOTHING`,
+            [projectId, memberId]
+          );
+        }
+      }
+
+      return projectRes.rows[0];
+    });
+
+    return res.status(201).json(createdProject);
   } catch (error) {
-    await client.query("ROLLBACK");
     return res.status(500).json({ message: "Failed to create project.", error: error.message });
-  } finally {
-    client.release();
   }
 }
 

@@ -163,6 +163,7 @@ export default function AdminSignup() {
           onChange={(e) => setForm({ ...form, inviteCode: e.target.value })}
           required
         />
+        <p className="mb-3 text-xs text-slate-500">Hint: for demo use the invite code <strong>ADMIN-2024</strong></p>
         
         <button className="w-full rounded bg-purple-600 px-3 py-2 text-white hover:bg-purple-700 font-medium" disabled={!passwordCheck.isValid}>
           Create Admin Account

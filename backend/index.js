@@ -22,7 +22,7 @@ app.use(morgan("dev"));
 app.get("/api/health", async (_req, res) => {
   try {
     await pool.query("SELECT 1");
-    return res.json({ status: "ok", db: pool.isMemory ? "pg-mem" : "postgres" });
+    return res.json({ status: "ok", db: "neon-postgres" });
   } catch (error) {
     return res.status(500).json({ status: "error", db: "disconnected", error: error.message });
   }
@@ -57,7 +57,7 @@ async function startServer() {
   const port = process.env.PORT || 5000;
   app.listen(process.env.PORT || 5000, () => {
     console.log(`API running on port ${port}`);
-    console.log(`Database mode: ${pool.isMemory ? "pg-mem (in-memory)" : "PostgreSQL"}`);
+    console.log("Database mode: Prisma + Neon PostgreSQL");
   });
 }
 

@@ -1,25 +1,37 @@
-const { Pool } = require("pg");
-const { newDb } = require("pg-mem");
+const { PrismaClient } = require("@prisma/client");
 
-const hasDatabaseUrl = typeof process.env.DATABASE_URL === "string" && process.env.DATABASE_URL.trim() !== "";
-const useInMemoryDb = process.env.USE_IN_MEMORY_DB === "true" || !hasDatabaseUrl;
-
-let pool;
-
-if (useInMemoryDb) {
-  const db = newDb({ autoCreateForeignKeyIndices: true });
-  const pgMem = db.adapters.createPg();
-  pool = new pgMem.Pool();
-} else {
-  pool = new Pool({ connectionString: process.env.DATABASE_URL });
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is required. Add your Neon connection string in backend/.env.");
 }
 
-pool.isMemory = useInMemoryDb;
+const prisma = new PrismaClient();
 
-if (pool.isMemory) {
-  console.warn(
-    "[db] USE_IN_MEMORY_DB is enabled, so users, passwords, and tasks are stored only in memory and will reset when the server restarts. Set DATABASE_URL to a real PostgreSQL database to persist data."
-  );
+function returnsRows(sql) {
+  return /^\s*(select|with)\b/i.test(sql) || /\breturning\b/i.test(sql);
 }
 
-module.exports = pool;
+async function query(sql, params = []) {
+  const values = Array.isArray(params) ? params : [params];
+
+  if (returnsRows(sql)) {
+    const rows = await prisma.$queryRawUnsafe(sql, ...values);
+    return {
+      rows: Array.isArray(rows) ? rows : [],
+      rowCount: Array.isArray(rows) ? rows.length : 0
+    };
+  }
+
+  const rowCount = await prisma.$executeRawUnsafe(sql, ...values);
+  return { rows: [], rowCount: Number(rowCount) || 0 };
+}
+
+async function end() {
+  await prisma.$disconnect();
+}
+
+module.exports = {
+  prisma,
+  query,
+  end,
+  isMemory: false
+};

@@ -1,5 +1,3 @@
-const fs = require("fs");
-const path = require("path");
 const bcrypt = require("bcryptjs");
 const pool = require("../config/db");
 
@@ -9,24 +7,12 @@ function daysFromNow(days) {
   return d.toISOString().slice(0, 10);
 }
 
-async function applySchema() {
-  const schemaPath = path.join(__dirname, "schema.sql");
-  const sql = fs.readFileSync(schemaPath, "utf8");
-  await pool.query(sql);
-}
+async function assertSchemaReady() {
+  const schemaCheck = await pool.query("SELECT to_regclass('public.users') AS users_table");
 
-async function ensureUserDepartmentColumn() {
-  try {
-    await pool.query("ALTER TABLE users ADD COLUMN department VARCHAR(100)");
-  } catch (error) {
-    if (!String(error.message || error).includes("already exists")) {
-      throw error;
-    }
+  if (!schemaCheck.rows[0] || !schemaCheck.rows[0].users_table) {
+    throw new Error("Database schema is missing. Run `npm run prisma:push` in backend first.");
   }
-
-  await pool.query("UPDATE users SET department = COALESCE(department, 'General') WHERE department IS NULL");
-  await pool.query("ALTER TABLE users ALTER COLUMN department SET DEFAULT 'General'");
-  await pool.query("ALTER TABLE users ALTER COLUMN department SET NOT NULL");
 }
 
 async function seedDemoData() {
@@ -120,9 +106,8 @@ async function seedDemoData() {
 }
 
 async function initializeDatabase() {
-  await applySchema();
-  await ensureUserDepartmentColumn();
-  console.log("Database schema ensured successfully.");
+  await assertSchemaReady();
+  console.log("Database schema found.");
 
   if (process.env.SEED_DEMO_DATA === "true") {
     await seedDemoData();
