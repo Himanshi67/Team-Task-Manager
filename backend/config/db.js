@@ -13,19 +13,20 @@ const shouldPreferDirect = process.env.PREFER_DIRECT_URL === "true" && Boolean(d
 const connectionString = shouldPreferDirect ? directUrl : pooledOrDefaultUrl;
 
 if (!connectionString) {
-  throw new Error(
-    "Database URL is missing. Set DATABASE_URL (preferred) or DATABASE_PUBLIC_URL in your deployment variables."
+  console.error(
+    "⚠️ WARNING: Database URL is missing. Set DATABASE_URL (preferred) or DATABASE_PUBLIC_URL in your deployment variables."
   );
+  console.error("Server will start in degraded mode. Auth and data endpoints will fail.");
 }
 
-if (!process.env.DATABASE_URL) {
+if (connectionString && !process.env.DATABASE_URL) {
   process.env.DATABASE_URL = connectionString;
 }
 
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: connectionString
+      url: connectionString || "postgresql://user:password@localhost/db"
     }
   }
 });

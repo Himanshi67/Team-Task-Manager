@@ -20,14 +20,27 @@ app.use(express.json());
 app.use(morgan("dev"));
 
 app.get("/api/health", async (_req, res) => {
+  const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
+  const hasDatabaseUrl = !!databaseUrl;
+  
+  if (!hasDatabaseUrl) {
+    return res.status(503).json({
+      status: "degraded",
+      db: "not_configured",
+      error: "DATABASE_URL not set in environment variables",
+      details: "Set DATABASE_URL in Railway service environment variables to enable database connectivity"
+    });
+  }
+  
   try {
     await pool.query("SELECT 1");
     return res.json({ status: "ok", db: "connected" });
   } catch (error) {
-    return res.status(200).json({
+    return res.status(503).json({
       status: "degraded",
-      db: "disconnected",
-      error: "Database is unavailable, running in degraded mode"
+      db: "error",
+      error: error.message || "Database connection failed",
+      details: "Database URL is set but connection failed. Check credentials and network access."
     });
   }
 });
