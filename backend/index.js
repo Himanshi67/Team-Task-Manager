@@ -106,9 +106,26 @@ async function startServer() {
   }
 
   const port = process.env.PORT || 5000;
-  app.listen(process.env.PORT || 5000, () => {
+  app.listen(process.env.PORT || 5000, async () => {
     console.log(`API running on port ${port}`);
-    console.log("Database mode: Prisma + Neon PostgreSQL");
+    
+    const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
+    
+    if (!databaseUrl) {
+      console.log("❌ Database mode: NONE (DATABASE_URL not set)");
+      console.warn("⚠️  No database URL configured. All data will be lost on restart.");
+    } else {
+      console.log("✓ Database mode: Prisma + Neon PostgreSQL");
+      console.log("✓ DATABASE_URL is set");
+      
+      // Try to verify database connection
+      try {
+        await pool.query("SELECT 1");
+        console.log("✅ Database connection verified");
+      } catch (error) {
+        console.warn("⚠️  Database connection failed:", error.message);
+      }
+    }
   });
 }
 

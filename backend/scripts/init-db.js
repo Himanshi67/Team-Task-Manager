@@ -10,6 +10,8 @@ const path = require("path");
 
 const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
 
+console.log("[init-db] DATABASE_URL present:", !!databaseUrl);
+
 if (!databaseUrl) {
   console.warn("⚠️  DATABASE_URL not set. Skipping database initialization.");
   process.exit(0);
@@ -21,6 +23,7 @@ try {
   // Generate Prisma Client
   console.log("[init-db] Generating Prisma Client...");
   execSync("prisma generate", { stdio: "inherit", cwd: __dirname + "/.." });
+  console.log("[init-db] ✓ Prisma Client generated");
 
   // Push schema to database
   console.log("[init-db] Pushing Prisma schema to database...");
@@ -30,7 +33,7 @@ try {
     env: { ...process.env, SKIP_ENV_VALIDATION: "true" }
   });
 
-  console.log("[init-db] ✅ Database initialized successfully!");
+  console.log("[init-db] ✅ Database schema pushed successfully!");
   process.exit(0);
 } catch (error) {
   console.error("[init-db] ❌ Database initialization failed:");
