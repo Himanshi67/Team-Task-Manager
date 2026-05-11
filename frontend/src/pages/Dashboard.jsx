@@ -535,7 +535,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-3">
-                  <button className="rounded-xl bg-[#3B82F6] px-5 py-3 text-sm font-medium text-white hover:bg-blue-500">
+                  <button type="submit" className="rounded-xl bg-[#3B82F6] px-5 py-3 text-sm font-medium text-white hover:bg-blue-500">
                     Create Project
                   </button>
                   {projectMessage ? <p className="text-sm text-emerald-300">{projectMessage}</p> : null}
