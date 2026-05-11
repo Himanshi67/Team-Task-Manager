@@ -3,6 +3,13 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    chunkSizeWarningLimit: 800
+  }
+});
+
+export default defineConfig({
+  plugins: [react()],
   preview: {
     host: "0.0.0.0",
     strictPort: true,
