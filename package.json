@@ -15,5 +15,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "serve": "^14.2.6"
   }
 }
