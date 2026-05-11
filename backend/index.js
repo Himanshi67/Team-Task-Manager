@@ -19,18 +19,31 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
-app.get("/api/health", async (_req, res) => {
-  const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
+aapp.get('/', (req, res) => {
+  res.send('Backend is running');
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true });
+});
+
+app.get('/api/health', async (req, res) => {
+  const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
   const hasDatabaseUrl = !!databaseUrl;
-  
+
   if (!hasDatabaseUrl) {
     return res.status(503).json({
-      status: "degraded",
-      db: "not_configured",
-      error: "DATABASE_URL not set in environment variables",
-      details: "Set DATABASE_URL in Railway service environment variables to enable database connectivity"
+      status: 'degraded',
+      db: 'not_configured',
+      error: 'DATABASE_URL not set in environment variables',
     });
   }
+
+  return res.status(200).json({
+    status: 'ok',
+    db: 'configured',
+  });
+});
   
   try {
     await pool.query("SELECT 1");
@@ -43,7 +56,7 @@ app.get("/api/health", async (_req, res) => {
       details: "Database URL is set but connection failed. Check credentials and network access."
     });
   }
-});
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
