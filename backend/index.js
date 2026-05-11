@@ -71,6 +71,7 @@ app.use((_req, res) => {
 async function startServer() {
   const maxAttempts = Number(process.env.DB_INIT_RETRIES || 5);
   const retryDelayMs = Number(process.env.DB_INIT_RETRY_DELAY_MS || 4000);
+  const PORT = Number(process.env.PORT) || 8080;
 
   let lastError;
 
@@ -105,9 +106,8 @@ async function startServer() {
     console.warn(`[startup] Continuing without database because ALLOW_START_WITHOUT_DB=true. Last DB error: ${errorMessage}`);
   }
 
-  const port = process.env.PORT || 5000;
-  app.listen(process.env.PORT || 5000, async () => {
-    console.log(`API running on port ${port}`);
+  app.listen(PORT, "0.0.0.0", async () => {
+    console.log(`API running on port ${PORT}`);
     
     const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
     
