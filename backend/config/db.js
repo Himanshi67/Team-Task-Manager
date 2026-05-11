@@ -8,9 +8,7 @@ const pooledOrDefaultUrl =
   "";
 
 const directUrl = process.env.DIRECT_URL || "";
-const shouldPreferDirect =
-  process.env.PREFER_DIRECT_URL === "true" ||
-  (process.env.NODE_ENV === "production" && pooledOrDefaultUrl.includes("-pooler") && Boolean(directUrl));
+const shouldPreferDirect = process.env.PREFER_DIRECT_URL === "true" && Boolean(directUrl);
 
 const connectionString = shouldPreferDirect ? directUrl : pooledOrDefaultUrl;
 
